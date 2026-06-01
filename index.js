@@ -3,8 +3,15 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const { initializeApp, cert } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 const bodyParser = require('body-parser');
+const cors = require('cors');
 
 const app = express();
+
+app.use(cors({
+  origin: ['https://venerable-sawine-b24154.netlify.app', 'http://localhost'],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type']
+}));
 
 const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 initializeApp({ credential: cert(serviceAccount) });
@@ -36,7 +43,7 @@ app.post('/webhook', bodyParser.raw({ type: 'application/json' }), async (req, r
 app.use(bodyParser.json());
 
 app.post('/create-checkout', async (req, res) => {
-  const { bookingId, shopName, serviceName, customerName, date, time } = req.body;
+  const { bookingId, shopName, serviceName, customerName, date, time, shopPhone } = req.body;
   try {
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
@@ -52,8 +59,8 @@ app.post('/create-checkout', async (req, res) => {
         quantity: 1
       }],
       mode: 'payment',
-      success_url: `https://venerable-sawine-b24154.netlify.app/booking.html?confirmed=${bookingId}`,
-      cancel_url: `https://venerable-sawine-b24154.netlify.app/booking.html?cancelled=true`,
+      success_url: `https://venerable-sawine-b24154.netlify.app/booking.html?shop=${shopPhone || ''}&confirmed=${bookingId}`,
+      cancel_url: `https://venerable-sawine-b24154.netlify.app/booking.html?shop=${shopPhone || ''}&cancelled=true`,
       metadata: { bookingId }
     });
     res.json({ url: session.url });
